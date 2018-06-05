@@ -33,7 +33,8 @@ def train(epoch):
         bin_op.binarization()
         
         # forwarding
-        data, target = Variable(data.cuda()), Variable(target.cuda())
+        if torch.cuda.is_available():
+            data, target = Variable(data.cuda()), Variable(target.cuda())
         optimizer.zero_grad()
         output = model(data)
         
@@ -60,7 +61,9 @@ def test():
     correct = 0
     bin_op.binarization()
     for data, target in testloader:
-        data, target = Variable(data.cuda()), Variable(target.cuda())
+
+        if torch.cuda.is_available():
+            data, target = Variable(data.cuda()), Variable(target.cuda())
                                     
         output = model(data)
         test_loss += criterion(output, target).data[0]
@@ -90,7 +93,7 @@ def adjust_learning_rate(optimizer, epoch):
 if __name__=='__main__':
     # prepare the options
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cpu', action='store_true',
+    parser.add_argument('--cpu', action='store_true', default='True',
             help='set if only CPU is available')
     parser.add_argument('--data', action='store', default='./data/',
             help='dataset path')

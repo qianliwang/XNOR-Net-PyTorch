@@ -1,3 +1,4 @@
+import torch;
 import torch.nn as nn
 import numpy
 
@@ -11,9 +12,7 @@ class BinOp():
 
         start_range = 1
         end_range = count_Conv2d-2
-        self.bin_range = numpy.linspace(start_range,
-                end_range, end_range-start_range+1)\
-                        .astype('int').tolist()
+        self.bin_range = numpy.linspace(start_range,end_range, end_range-start_range+1).astype('int').tolist()
         self.num_of_params = len(self.bin_range)
         self.saved_params = []
         self.target_params = []
@@ -42,8 +41,9 @@ class BinOp():
 
     def clampConvParams(self):
         for index in range(self.num_of_params):
-            self.target_modules[index].data.clamp(-1.0, 1.0,
-                    out = self.target_modules[index].data)
+            #self.target_modules[index].data.clamp(-1.0, 1.0, out=self.target_modules[index].data)
+            #self.target_modules[index].data = torch.clamp(self.target_modules[index].data,-1.0, 1.0)
+            torch.clamp(self.target_modules[index].data,-1.0, 1.0, out=self.target_modules[index].data);
 
     def save_params(self):
         for index in range(self.num_of_params):
@@ -53,10 +53,10 @@ class BinOp():
         for index in range(self.num_of_params):
             n = self.target_modules[index].data[0].nelement()
             s = self.target_modules[index].data.size()
-            m = self.target_modules[index].data.norm(1, 3, keepdim=True)\
-                    .sum(2, keepdim=True).sum(1, keepdim=True).div(n)
-            self.target_modules[index].data.sign()\
-                    .mul(m.expand(s), out=self.target_modules[index].data)
+            m = self.target_modules[index].data.norm(1, 3, keepdim=True).sum(2, keepdim=True).sum(1, keepdim=True).div(n)
+            #self.target_modules[index].data.sign().mul(m.expand(s), out=self.target_modules[index].data)
+            #self.target_modules[index].data = self.target_modules[index].data.sign().mul(m.expand(s))
+            torch.mul(self.target_modules[index].data.sign(),m.expand(s),out=self.target_modules[index].data);
 
     def restore(self):
         for index in range(self.num_of_params):
@@ -67,8 +67,7 @@ class BinOp():
             weight = self.target_modules[index].data
             n = weight[0].nelement()
             s = weight.size()
-            m = weight.norm(1, 3, keepdim=True)\
-                    .sum(2, keepdim=True).sum(1, keepdim=True).div(n).expand(s)
+            m = weight.norm(1, 3, keepdim=True).sum(2, keepdim=True).sum(1, keepdim=True).div(n).expand(s)
             m[weight.lt(-1.0)] = 0 
             m[weight.gt(1.0)] = 0
             # m = m.add(1.0/n).mul(1.0-1.0/s[1]).mul(n)
@@ -76,7 +75,6 @@ class BinOp():
             #         self.target_modules[index].grad.data.mul(m)
             m = m.mul(self.target_modules[index].grad.data)
             m_add = weight.sign().mul(self.target_modules[index].grad.data)
-            m_add = m_add.sum(3, keepdim=True)\
-                    .sum(2, keepdim=True).sum(1, keepdim=True).div(n).expand(s)
+            m_add = m_add.sum(3, keepdim=True).sum(2, keepdim=True).sum(1, keepdim=True).div(n).expand(s)
             m_add = m_add.mul(weight.sign())
             self.target_modules[index].grad.data = m.add(m_add).mul(1.0-1.0/s[1]).mul(n)
